@@ -1,715 +1,358 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>板式家具工艺流程设计器</title>
-    
-    <!-- 引入React Flow和相关依赖 -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/reactflow@11/dist/index.umd.js"></script>
-    
-    <!-- 引入Ant Design -->
-    <link href="https://cdn.jsdelivr.net/npm/antd@5/dist/reset.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/antd@5/dist/antd.min.js"></script>
-    
-    <!-- 引入图标库 -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    
-    <style>
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', sans-serif;
-            background: #f5f5f5;
-        }
-        
-        .workflow-designer {
-            display: flex;
-            height: 100vh;
-            background: #fff;
-        }
-        
-        .sidebar {
-            width: 280px;
-            background: #fafafa;
-            border-right: 1px solid #e8e8e8;
-            padding: 16px;
-            overflow-y: auto;
-        }
-        
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .toolbar {
-            height: 56px;
-            background: #fff;
-            border-bottom: 1px solid #e8e8e8;
-            display: flex;
-            align-items: center;
-            padding: 0 16px;
-            justify-content: space-between;
-        }
-        
-        .flow-container {
-            flex: 1;
-            position: relative;
-        }
-        
-        .reactflow-wrapper {
-            width: 100%;
-            height: 100%;
-        }
-        
-        .node-palette {
-            margin-bottom: 24px;
-        }
-        
-        .node-palette h3 {
-            margin: 0 0 12px 0;
-            font-size: 14px;
-            font-weight: 600;
-            color: #262626;
-        }
-        
-        .node-item {
-            display: flex;
-            align-items: center;
-            padding: 8px 12px;
-            margin-bottom: 8px;
-            background: #fff;
-            border: 1px solid #d9d9d9;
-            border-radius: 6px;
-            cursor: grab;
-            transition: all 0.2s;
-            user-select: none;
-        }
-        
-        .node-item:hover {
-            border-color: #1890ff;
-            box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
-        }
-        
-        .node-item:active {
-            cursor: grabbing;
-        }
-        
-        .node-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 8px;
-            color: #fff;
-            font-size: 14px;
-        }
-        
-        .node-info {
-            flex: 1;
-        }
-        
-        .node-name {
-            font-size: 13px;
-            font-weight: 500;
-            color: #262626;
-            margin-bottom: 2px;
-        }
-        
-        .node-desc {
-            font-size: 12px;
-            color: #8c8c8c;
-        }
-        
-        /* 节点类型颜色 */
-        .node-start { background: #52c41a; }
-        .node-end { background: #ff4d4f; }
-        .node-cutting { background: #1890ff; }
-        .node-edge-banding { background: #722ed1; }
-        .node-drilling { background: #fa8c16; }
-        .node-assembly { background: #13c2c2; }
-        .node-packaging { background: #eb2f96; }
-        .node-quality-check { background: #faad14; }
-        
-        /* 自定义React Flow节点样式 */
-        .custom-node {
-            background: #fff;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            padding: 10px;
-            min-width: 120px;
-            text-align: center;
-            position: relative;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-        
-        .custom-node.selected {
-            border-color: #1890ff;
-        }
-        
-        .custom-node .node-header {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 6px;
-        }
-        
-        .custom-node .node-title {
-            font-size: 13px;
-            font-weight: 500;
-            color: #262626;
-        }
-        
-        .custom-node .node-type {
-            font-size: 11px;
-            color: #8c8c8c;
-        }
-        
-        .properties-panel {
-            margin-top: 24px;
-        }
-        
-        .properties-panel h3 {
-            margin: 0 0 12px 0;
-            font-size: 14px;
-            font-weight: 600;
-            color: #262626;
-        }
-        
-        .property-item {
-            margin-bottom: 12px;
-        }
-        
-        .property-item label {
-            display: block;
-            font-size: 12px;
-            color: #595959;
-            margin-bottom: 4px;
-        }
-        
-        .property-item input,
-        .property-item textarea,
-        .property-item select {
-            width: 100%;
-            padding: 6px 8px;
-            border: 1px solid #d9d9d9;
-            border-radius: 4px;
-            font-size: 12px;
-            box-sizing: border-box;
-        }
-        
-        .property-item input:focus,
-        .property-item textarea:focus,
-        .property-item select:focus {
-            border-color: #1890ff;
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
-        }
-        
-        .cost-summary {
-            margin-top: 24px;
-            padding: 16px;
-            background: #f6ffed;
-            border: 1px solid #b7eb8f;
-            border-radius: 6px;
-        }
-        
-        .cost-summary h4 {
-            margin: 0 0 12px 0;
-            font-size: 14px;
-            color: #52c41a;
-        }
-        
-        .cost-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px;
-            font-size: 12px;
-        }
-        
-        .cost-total {
-            font-weight: 600;
-            border-top: 1px solid #b7eb8f;
-            padding-top: 8px;
-            margin-top: 8px;
-        }
-        
-        /* 工具栏按钮样式 */
-        .toolbar-btn {
-            display: inline-flex;
-            align-items: center;
-            padding: 6px 12px;
-            margin-right: 8px;
-            border: 1px solid #d9d9d9;
-            border-radius: 4px;
-            background: #fff;
-            cursor: pointer;
-            font-size: 12px;
-            color: #595959;
-            transition: all 0.2s;
-        }
-        
-        .toolbar-btn:hover {
-            border-color: #1890ff;
-            color: #1890ff;
-        }
-        
-        .toolbar-btn i {
-            margin-right: 4px;
-        }
-        
-        .toolbar-btn.primary {
-            background: #1890ff;
-            border-color: #1890ff;
-            color: #fff;
-        }
-        
-        .toolbar-btn.primary:hover {
-            background: #40a9ff;
-            border-color: #40a9ff;
-        }
-        
-        /* 响应式设计 */
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 250px;
-            }
-            
-            .toolbar {
-                padding: 0 8px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div id="workflow-designer-root"></div>
+{% extends "base.html" %}
 
-    <script type="text/babel">
-        const { useState, useEffect, useCallback, useMemo } = React;
-        const { 
-            ReactFlow, 
-            Background, 
-            Controls, 
-            MiniMap,
-            useNodesState,
-            useEdgesState,
-            addEdge,
-            Panel
-        } = ReactFlow;
+{% block title %}工艺流程设计器 - 板式家具工艺流程管理系统{% endblock %}
 
-        // 节点类型配置
-        const NODE_TYPES = {
-            start: { name: '开始', icon: 'fa-play', color: 'node-start', desc: '流程起始点' },
-            end: { name: '结束', icon: 'fa-stop', color: 'node-end', desc: '流程结束点' },
-            cutting: { name: '切割', icon: 'fa-cut', color: 'node-cutting', desc: '板材切割工艺' },
-            edge_banding: { name: '封边', icon: 'fa-border-all', color: 'node-edge-banding', desc: '板材封边工艺' },
-            drilling: { name: '打孔', icon: 'fa-circle', color: 'node-drilling', desc: '钻孔加工工艺' },
-            assembly: { name: '组装', icon: 'fa-puzzle-piece', color: 'node-assembly', desc: '部件组装工艺' },
-            packaging: { name: '包装', icon: 'fa-box', color: 'node-packaging', desc: '产品包装工艺' },
-            quality_check: { name: '质检', icon: 'fa-check-circle', color: 'node-quality-check', desc: '质量检验工艺' }
-        };
+{% block page_title %}工艺流程设计器{% endblock %}
 
-        // 自定义节点组件
-        const CustomNode = ({ data, selected }) => {
-            const nodeConfig = NODE_TYPES[data.type] || {};
-            
-            return (
-                <div className={`custom-node ${selected ? 'selected' : ''}`}>
-                    <div className="node-header">
-                        <i className={`fas ${nodeConfig.icon} ${nodeConfig.color}`} style={{marginRight: '6px'}}></i>
-                        <div className="node-title">{data.name || nodeConfig.name}</div>
-                    </div>
-                    <div className="node-type">{nodeConfig.desc}</div>
-                    {data.estimated_time && (
-                        <div style={{fontSize: '10px', color: '#8c8c8c', marginTop: '4px'}}>
-                            预计: {data.estimated_time}分钟
-                        </div>
-                    )}
+{% block extra_css %}
+<!-- 引入React Flow和相关依赖 -->
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/reactflow@11/dist/index.umd.js"></script>
+
+<!-- 引入Ant Design -->
+<link href="https://cdn.jsdelivr.net/npm/antd@5/dist/reset.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/antd@5/dist/antd.min.js"></script>
+
+<style>
+    .workflow-designer {
+        display: flex;
+        height: calc(100vh - 200px);
+        background: #fff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .sidebar {
+        width: 280px;
+        background: #fafafa;
+        border-right: 1px solid #e8e8e8;
+        padding: 16px;
+        overflow-y: auto;
+    }
+    
+    .main-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .toolbar {
+        height: 56px;
+        background: #fff;
+        border-bottom: 1px solid #e8e8e8;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        justify-content: space-between;
+    }
+    
+    .flow-container {
+        flex: 1;
+        position: relative;
+    }
+    
+    .reactflow-wrapper {
+        width: 100%;
+        height: 100%;
+    }
+    
+    .node-palette {
+        margin-bottom: 24px;
+    }
+    
+    .node-palette h3 {
+        margin: 0 0 12px 0;
+        font-size: 14px;
+        font-weight: 600;
+        color: #262626;
+    }
+    
+    .node-item {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        margin-bottom: 8px;
+        background: #fff;
+        border: 1px solid #d9d9d9;
+        border-radius: 6px;
+        cursor: grab;
+        transition: all 0.2s;
+        user-select: none;
+    }
+    
+    .node-item:hover {
+        border-color: #1890ff;
+        box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
+    }
+    
+    .node-item:active {
+        cursor: grabbing;
+    }
+    
+    .node-icon {
+        width: 20px;
+        height: 20px;
+        margin-right: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #fff;
+    }
+    
+    .node-icon.cutting { background: #ff4d4f; }
+    .node-icon.edge-banding { background: #fa8c16; }
+    .node-icon.drilling { background: #faad14; }
+    .node-icon.assembly { background: #52c41a; }
+    .node-icon.packaging { background: #1890ff; }
+    .node-icon.quality-check { background: #722ed1; }
+    
+    .properties-panel {
+        width: 300px;
+        background: #fafafa;
+        border-left: 1px solid #e8e8e8;
+        padding: 16px;
+        overflow-y: auto;
+    }
+    
+    .properties-panel h3 {
+        margin: 0 0 16px 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #262626;
+    }
+    
+    .property-group {
+        margin-bottom: 16px;
+    }
+    
+    .property-group label {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 12px;
+        color: #666;
+    }
+    
+    .property-group input,
+    .property-group select {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid #d9d9d9;
+        border-radius: 4px;
+        font-size: 12px;
+    }
+    
+    .property-group input:focus,
+    .property-group select:focus {
+        outline: none;
+        border-color: #1890ff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="workflow-designer">
+    <!-- 左侧节点面板 -->
+    <div class="sidebar">
+        <div class="node-palette">
+            <h3>工艺节点</h3>
+            <div class="node-item" draggable="true" data-type="cutting">
+                <div class="node-icon cutting">
+                    <i class="fas fa-cut"></i>
                 </div>
-            );
-        };
-
-        // 节点调色板组件
-        const NodePalette = ({ onNodeAdd }) => {
-            const onDragStart = (event, nodeType) => {
-                event.dataTransfer.setData('application/reactflow', nodeType);
-                event.dataTransfer.effectAllowed = 'move';
-            };
-
-            return (
-                <div className="node-palette">
-                    <h3>工艺节点</h3>
-                    {Object.entries(NODE_TYPES).map(([type, config]) => (
-                        <div
-                            key={type}
-                            className="node-item"
-                            draggable
-                            onDragStart={(e) => onDragStart(e, type)}
-                        >
-                            <div className={`node-icon ${config.color}`}>
-                                <i className={`fas ${config.icon}`}></i>
-                            </div>
-                            <div className="node-info">
-                                <div className="node-name">{config.name}</div>
-                                <div className="node-desc">{config.desc}</div>
-                            </div>
-                        </div>
-                    ))}
+                <span>切割</span>
+            </div>
+            <div class="node-item" draggable="true" data-type="edge-banding">
+                <div class="node-icon edge-banding">
+                    <i class="fas fa-border-style"></i>
                 </div>
-            );
-        };
-
-        // 属性面板组件
-        const PropertiesPanel = ({ selectedNode, onNodeUpdate, costSummary }) => {
-            const [nodeData, setNodeData] = useState(selectedNode?.data || {});
-
-            useEffect(() => {
-                setNodeData(selectedNode?.data || {});
-            }, [selectedNode]);
-
-            const handleChange = (field, value) => {
-                const newData = { ...nodeData, [field]: value };
-                setNodeData(newData);
-                onNodeUpdate(selectedNode.id, newData);
-            };
-
-            if (!selectedNode) {
-                return (
-                    <div className="properties-panel">
-                        <h3>属性设置</h3>
-                        <p style={{color: '#8c8c8c', fontSize: '12px'}}>请选择一个节点来编辑属性</p>
-                    </div>
-                );
-            }
-
-            const nodeConfig = NODE_TYPES[selectedNode.data.type] || {};
-
-            return (
-                <div className="properties-panel">
-                    <h3>节点属性</h3>
-                    
-                    <div className="property-item">
-                        <label>节点名称</label>
-                        <input
-                            type="text"
-                            value={nodeData.name || ''}
-                            onChange={(e) => handleChange('name', e.target.value)}
-                            placeholder={nodeConfig.name}
-                        />
-                    </div>
-
-                    <div className="property-item">
-                        <label>描述</label>
-                        <textarea
-                            value={nodeData.description || ''}
-                            onChange={(e) => handleChange('description', e.target.value)}
-                            placeholder="工艺描述"
-                            rows="3"
-                        />
-                    </div>
-
-                    <div className="property-item">
-                        <label>预估时间 (分钟)</label>
-                        <input
-                            type="number"
-                            value={nodeData.estimated_time || ''}
-                            onChange={(e) => handleChange('estimated_time', parseFloat(e.target.value) || 0)}
-                            min="0"
-                            step="0.1"
-                        />
-                    </div>
-
-                    <div className="property-item">
-                        <label>人工成本 (元/小时)</label>
-                        <input
-                            type="number"
-                            value={nodeData.labor_cost_per_hour || ''}
-                            onChange={(e) => handleChange('labor_cost_per_hour', parseFloat(e.target.value) || 0)}
-                            min="0"
-                            step="0.01"
-                        />
-                    </div>
-
-                    <div className="property-item">
-                        <label>设备成本 (元/小时)</label>
-                        <input
-                            type="number"
-                            value={nodeData.machine_cost_per_hour || ''}
-                            onChange={(e) => handleChange('machine_cost_per_hour', parseFloat(e.target.value) || 0)}
-                            min="0"
-                            step="0.01"
-                        />
-                    </div>
-
-                    {/* 成本预览 */}
-                    {costSummary && (
-                        <div className="cost-summary">
-                            <h4><i className="fas fa-calculator"></i> 成本预览</h4>
-                            <div className="cost-item">
-                                <span>材料成本:</span>
-                                <span>¥{costSummary.material_cost?.toFixed(2) || '0.00'}</span>
-                            </div>
-                            <div className="cost-item">
-                                <span>人工成本:</span>
-                                <span>¥{costSummary.labor_cost?.toFixed(2) || '0.00'}</span>
-                            </div>
-                            <div className="cost-item">
-                                <span>设备成本:</span>
-                                <span>¥{costSummary.machine_cost?.toFixed(2) || '0.00'}</span>
-                            </div>
-                            <div className="cost-item">
-                                <span>间接成本:</span>
-                                <span>¥{costSummary.overhead_cost?.toFixed(2) || '0.00'}</span>
-                            </div>
-                            <div className="cost-item cost-total">
-                                <span>总成本:</span>
-                                <span>¥{costSummary.total_cost?.toFixed(2) || '0.00'}</span>
-                            </div>
-                        </div>
-                    )}
+                <span>封边</span>
+            </div>
+            <div class="node-item" draggable="true" data-type="drilling">
+                <div class="node-icon drilling">
+                    <i class="fas fa-circle"></i>
                 </div>
-            );
-        };
-
-        // 主应用组件
-        const WorkflowDesigner = () => {
-            const [nodes, setNodes, onNodesChange] = useNodesState([]);
-            const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-            const [selectedNode, setSelectedNode] = useState(null);
-            const [costSummary, setCostSummary] = useState(null);
-            const [workflowTemplate, setWorkflowTemplate] = useState({
-                name: '新建工艺流程',
-                description: '',
-                product_series: ''
-            });
-
-            const nodeTypes = useMemo(() => ({
-                custom: CustomNode
-            }), []);
-
-            // 拖拽添加节点
-            const onDragOver = useCallback((event) => {
-                event.preventDefault();
-                event.dataTransfer.dropEffect = 'move';
-            }, []);
-
-            const onDrop = useCallback((event) => {
-                event.preventDefault();
-
-                const reactFlowBounds = event.target.getBoundingClientRect();
-                const type = event.dataTransfer.getData('application/reactflow');
-
-                if (!type) return;
-
-                const position = {
-                    x: event.clientX - reactFlowBounds.left - 60,
-                    y: event.clientY - reactFlowBounds.top - 30,
-                };
-
-                const newNode = {
-                    id: `node_${Date.now()}`,
-                    type: 'custom',
-                    position,
-                    data: {
-                        type: type,
-                        name: NODE_TYPES[type]?.name,
-                        estimated_time: 0,
-                        labor_cost_per_hour: 0,
-                        machine_cost_per_hour: 0
-                    },
-                };
-
-                setNodes((nds) => nds.concat(newNode));
-            }, [setNodes]);
-
-            // 连接节点
-            const onConnect = useCallback((params) => {
-                setEdges((eds) => addEdge(params, eds));
-            }, [setEdges]);
-
-            // 节点选择
-            const onNodeClick = useCallback((event, node) => {
-                setSelectedNode(node);
-            }, []);
-
-            // 更新节点数据
-            const onNodeUpdate = useCallback((nodeId, newData) => {
-                setNodes((nds) =>
-                    nds.map((node) =>
-                        node.id === nodeId
-                            ? { ...node, data: { ...node.data, ...newData } }
-                            : node
-                    )
-                );
-            }, [setNodes]);
-
-            // 计算成本
-            const calculateCost = useCallback(async () => {
-                try {
-                    // 准备数据
-                    const workflowData = {
-                        nodes: nodes.map(node => ({
-                            node_id: node.id,
-                            node_type: node.data.type,
-                            name: node.data.name,
-                            description: node.data.description,
-                            position: node.position,
-                            estimated_time_minutes: node.data.estimated_time || 0,
-                            labor_cost_per_hour: node.data.labor_cost_per_hour || 0,
-                            machine_cost_per_hour: node.data.machine_cost_per_hour || 0
-                        })),
-                        edges: edges.map(edge => ({
-                            connection_id: edge.id,
-                            source_node_id: edge.source,
-                            target_node_id: edge.target
-                        }))
-                    };
-
-                    // 计算成本（这里简化处理，实际应该调用API）
-                    let materialCost = 0;
-                    let laborCost = 0;
-                    let machineCost = 0;
-                    
-                    nodes.forEach(node => {
-                        const time = node.data.estimated_time || 0;
-                        const laborRate = node.data.labor_cost_per_hour || 0;
-                        const machineRate = node.data.machine_cost_per_hour || 0;
-                        
-                        laborCost += (time / 60) * laborRate;
-                        machineCost += (time / 60) * machineRate;
-                    });
-
-                    const overheadCost = (materialCost + laborCost + machineCost) * 0.15;
-                    const totalCost = materialCost + laborCost + machineCost + overheadCost;
-
-                    setCostSummary({
-                        material_cost: materialCost,
-                        labor_cost: laborCost,
-                        machine_cost: machineCost,
-                        overhead_cost: overheadCost,
-                        total_cost: totalCost
-                    });
-
-                } catch (error) {
-                    console.error('成本计算失败:', error);
-                }
-            }, [nodes, edges]);
-
-            // 保存工艺流程
-            const saveWorkflow = useCallback(async () => {
-                try {
-                    const workflowData = {
-                        name: workflowTemplate.name,
-                        description: workflowTemplate.description,
-                        product_series: workflowTemplate.product_series,
-                        nodes: nodes.map(node => ({
-                            node_id: node.id,
-                            node_type: node.data.type,
-                            name: node.data.name,
-                            description: node.data.description,
-                            position: node.position,
-                            process_params: {},
-                            estimated_time_minutes: node.data.estimated_time || 0,
-                            labor_cost_per_hour: node.data.labor_cost_per_hour || 0,
-                            machine_cost_per_hour: node.data.machine_cost_per_hour || 0
-                        })),
-                        connections: edges.map(edge => ({
-                            connection_id: edge.id,
-                            source_node_id: edge.source,
-                            target_node_id: edge.target,
-                            conditions: {}
-                        }))
-                    };
-
-                    // 这里应该调用API保存
-                    console.log('保存工艺流程:', workflowData);
-                    alert('工艺流程保存成功！');
-
-                } catch (error) {
-                    console.error('保存失败:', error);
-                    alert('保存失败: ' + error.message);
-                }
-            }, [workflowTemplate, nodes, edges]);
-
-            return (
-                <div className="workflow-designer">
-                    {/* 侧边栏 */}
-                    <div className="sidebar">
-                        <NodePalette onNodeAdd={(type) => console.log('Add node:', type)} />
-                        <PropertiesPanel 
-                            selectedNode={selectedNode}
-                            onNodeUpdate={onNodeUpdate}
-                            costSummary={costSummary}
-                        />
-                    </div>
-
-                    {/* 主内容区 */}
-                    <div className="main-content">
-                        {/* 工具栏 */}
-                        <div className="toolbar">
-                            <div>
-                                <input
-                                    type="text"
-                                    placeholder="流程名称"
-                                    value={workflowTemplate.name}
-                                    onChange={(e) => setWorkflowTemplate({
-                                        ...workflowTemplate,
-                                        name: e.target.value
-                                    })}
-                                    style={{
-                                        border: 'none',
-                                        fontSize: '16px',
-                                        fontWeight: '500',
-                                        background: 'transparent',
-                                        outline: 'none'
-                                    }}
-                                />
-                            </div>
-                            <div>
-                                <button className="toolbar-btn" onClick={calculateCost}>
-                                    <i className="fas fa-calculator"></i>
-                                    计算成本
-                                </button>
-                                <button className="toolbar-btn primary" onClick={saveWorkflow}>
-                                    <i className="fas fa-save"></i>
-                                    保存流程
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* 流程图区域 */}
-                        <div className="flow-container">
-                            <div className="reactflow-wrapper">
-                                <ReactFlow
-                                    nodes={nodes}
-                                    edges={edges}
-                                    onNodesChange={onNodesChange}
-                                    onEdgesChange={onEdgesChange}
-                                    onConnect={onConnect}
-                                    onNodeClick={onNodeClick}
-                                    onDrop={onDrop}
-                                    onDragOver={onDragOver}
-                                    nodeTypes={nodeTypes}
-                                    fitView
-                                >
-                                    <Background variant="dots" gap={12} size={1} />
-                                    <Controls />
-                                    <MiniMap />
-                                </ReactFlow>
-                            </div>
-                        </div>
+                <span>打孔</span>
+            </div>
+            <div class="node-item" draggable="true" data-type="assembly">
+                <div class="node-icon assembly">
+                    <i class="fas fa-puzzle-piece"></i>
+                </div>
+                <span>组装</span>
+            </div>
+            <div class="node-item" draggable="true" data-type="packaging">
+                <div class="node-icon packaging">
+                    <i class="fas fa-box"></i>
+                </div>
+                <span>包装</span>
+            </div>
+            <div class="node-item" draggable="true" data-type="quality-check">
+                <div class="node-icon quality-check">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <span>质检</span>
+            </div>
+        </div>
+        
+        <div class="node-palette">
+            <h3>流程控制</h3>
+            <div class="node-item" draggable="true" data-type="start">
+                <div class="node-icon" style="background: #52c41a;">
+                    <i class="fas fa-play"></i>
+                </div>
+                <span>开始</span>
+            </div>
+            <div class="node-item" draggable="true" data-type="end">
+                <div class="node-icon" style="background: #ff4d4f;">
+                    <i class="fas fa-stop"></i>
+                </div>
+                <span>结束</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 主内容区域 -->
+    <div class="main-content">
+        <!-- 工具栏 -->
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <button class="btn btn-primary btn-sm me-2" id="saveWorkflow">
+                    <i class="fas fa-save"></i> 保存流程
+                </button>
+                <button class="btn btn-success btn-sm me-2" id="loadWorkflow">
+                    <i class="fas fa-folder-open"></i> 加载流程
+                </button>
+                <button class="btn btn-info btn-sm me-2" id="calculateCost">
+                    <i class="fas fa-calculator"></i> 计算成本
+                </button>
+            </div>
+            <div class="toolbar-right">
+                <button class="btn btn-outline-secondary btn-sm me-2" id="zoomIn">
+                    <i class="fas fa-search-plus"></i>
+                </button>
+                <button class="btn btn-outline-secondary btn-sm me-2" id="zoomOut">
+                    <i class="fas fa-search-minus"></i>
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" id="fitView">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- 流程图容器 -->
+        <div class="flow-container">
+            <div class="reactflow-wrapper" id="reactflow-wrapper">
+                <!-- React Flow 将在这里渲染 -->
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999;">
+                    <div style="text-align: center;">
+                        <i class="fas fa-project-diagram fa-3x mb-3"></i>
+                        <p>从左侧拖拽节点到此处开始设计工艺流程</p>
                     </div>
                 </div>
-            );
-        };
+            </div>
+        </div>
+    </div>
+    
+    <!-- 右侧属性面板 -->
+    <div class="properties-panel" id="propertiesPanel" style="display: none;">
+        <h3>节点属性</h3>
+        <div class="property-group">
+            <label>节点名称</label>
+            <input type="text" id="nodeName" placeholder="输入节点名称">
+        </div>
+        <div class="property-group">
+            <label>节点类型</label>
+            <select id="nodeType">
+                <option value="cutting">切割</option>
+                <option value="edge-banding">封边</option>
+                <option value="drilling">打孔</option>
+                <option value="assembly">组装</option>
+                <option value="packaging">包装</option>
+                <option value="quality-check">质检</option>
+            </select>
+        </div>
+        <div class="property-group">
+            <label>预估时间（分钟）</label>
+            <input type="number" id="estimatedTime" placeholder="0">
+        </div>
+        <div class="property-group">
+            <label>人工成本（元/小时）</label>
+            <input type="number" id="laborCost" placeholder="0">
+        </div>
+        <div class="property-group">
+            <label>设备成本（元/小时）</label>
+            <input type="number" id="machineCost" placeholder="0">
+        </div>
+        <div class="property-group">
+            <label>描述</label>
+            <textarea id="nodeDescription" rows="3" placeholder="输入节点描述"></textarea>
+        </div>
+        <button class="btn btn-primary btn-sm w-100" id="updateNode">
+            <i class="fas fa-save"></i> 更新节点
+        </button>
+    </div>
+</div>
+{% endblock %}
 
-        // 渲染应用
-        ReactDOM.render(<WorkflowDesigner />, document.getElementById('workflow-designer-root'));
-    </script>
-</body>
-</html>
+{% block extra_js %}
+<script>
+// 工艺流程设计器功能
+$(document).ready(function() {
+    let selectedNode = null;
+    
+    // 拖拽功能
+    $('.node-item').on('dragstart', function(e) {
+        e.originalEvent.dataTransfer.setData('text/plain', $(this).data('type'));
+    });
+    
+    // 保存流程
+    $('#saveWorkflow').click(function() {
+        alert('保存流程功能待实现');
+    });
+    
+    // 加载流程
+    $('#loadWorkflow').click(function() {
+        alert('加载流程功能待实现');
+    });
+    
+    // 计算成本
+    $('#calculateCost').click(function() {
+        alert('成本计算功能待实现');
+    });
+    
+    // 缩放控制
+    $('#zoomIn').click(function() {
+        alert('放大功能待实现');
+    });
+    
+    $('#zoomOut').click(function() {
+        alert('缩小功能待实现');
+    });
+    
+    $('#fitView').click(function() {
+        alert('适应视图功能待实现');
+    });
+    
+    // 节点选择
+    $(document).on('click', '.node-item', function() {
+        selectedNode = $(this).data('type');
+        $('#propertiesPanel').show();
+        
+        // 填充属性面板
+        $('#nodeName').val($(this).find('span').text());
+        $('#nodeType').val(selectedNode);
+    });
+    
+    // 更新节点
+    $('#updateNode').click(function() {
+        if (selectedNode) {
+            alert('节点更新功能待实现');
+        }
+    });
+});
+</script>
+{% endblock %}

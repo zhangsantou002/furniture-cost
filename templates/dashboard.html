@@ -1,10 +1,135 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>工艺成本 - Dashboard</title>
-</head>
-<body>
-    <h1>欢迎来到工艺成本管理系统 Dashboard</h1>
-    <p>这里是主页。</p>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}仪表板 - 板式家具工艺流程管理系统{% endblock %}
+
+{% block page_title %}系统仪表板{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- 统计卡片 -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            总产品数</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_products }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-boxes fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            已受控产品</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ controlled_products }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            已落地产品</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ standardized_products }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clipboard-check fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            工艺流程模板</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ workflow_templates }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-project-diagram fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 图表区域 -->
+<div class="row">
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">产品系列分布</h6>
+            </div>
+            <div class="card-body">
+                <div id="series-pie-chart"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">文件受控状态分布</h6>
+            </div>
+            <div class="card-body">
+                <div id="file-control-chart"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">标准化落地状态分布</h6>
+            </div>
+            <div class="card-body">
+                <div id="standardization-chart"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 渲染图表
+document.addEventListener('DOMContentLoaded', function() {
+    // 系列分布饼图
+    const seriesPieData = {{ charts.series_pie | safe }};
+    Plotly.newPlot('series-pie-chart', seriesPieData.data, seriesPieData.layout);
+    
+    // 文件受控状态柱状图
+    const fileControlData = {{ charts.file_control_bar | safe }};
+    Plotly.newPlot('file-control-chart', fileControlData.data, fileControlData.layout);
+    
+    // 标准化落地状态柱状图
+    const standardizationData = {{ charts.standardization_bar | safe }};
+    Plotly.newPlot('standardization-chart', standardizationData.data, standardizationData.layout);
+});
+</script>
+{% endblock %}
