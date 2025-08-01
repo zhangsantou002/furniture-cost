@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>成本分析报表</title>
+    
+    <!-- 引入Chart.js和其他依赖 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    
+    <!-- 引入Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 引入图标库 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+            border: none;
+            transition: transform 0.2s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .stats-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            margin-bottom: 1rem;
+        }
+        
+        .stats-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stats-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0;
+        }
+        
+        .filter-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .filter-select {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+        }
+        
+        .data-table {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .table {
+            margin-bottom: 0;
+        }
+        
+        .table th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            font-weight: 600;
+            color: #495057;
+            padding: 1rem 0.75rem;
+        }
+        
+        .table td {
+            padding: 0.75rem;
+            vertical-align: middle;
+        }
+        
+        .cost-breakdown {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .cost-tag {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .cost-tag.material { background-color: #e3f2fd; color: #1976d2; }
+        .cost-tag.labor { background-color: #fff3e0; color: #f57c00; }
+        .cost-tag.machine { background-color: #f3e5f5; color: #7b1fa2; }
+        .cost-tag.overhead { background-color: #e8f5e8; color: #388e3c; }
+        
+        .trend-indicator {
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .trend-up { color: #dc3545; }
+        .trend-down { color: #28a745; }
+        .trend-stable { color: #6c757d; }
+        
+        .export-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .btn-export {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+            background: white;
+            color: #495057;
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-export:hover {
+            background: #f8f9fa;
+            color: #495057;
+            text-decoration: none;
+        }
+        
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .cost-comparison {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .comparison-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid #e9ecef;
+        }
+        
+        .comparison-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .comparison-title {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .comparison-change {
+            font-size: 0.875rem;
+        }
+        
+        .progress-bar-custom {
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            background-color: #e9ecef;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="mb-0">
+                        <i class="fas fa-chart-line me-3"></i>
+                        成本分析报表
+                    </h1>
+                    <p class="mb-0 mt-2 opacity-75">板式家具加工成本分析与趋势监控</p>
+                </div>
+                <div class="col-auto">
+                    <div class="export-buttons">
+                        <a href="#" class="btn-export" onclick="exportToExcel()">
+                            <i class="fas fa-file-excel me-1"></i>导出Excel
+                        </a>
+                        <a href="#" class="btn-export" onclick="exportToPDF()">
+                            <i class="fas fa-file-pdf me-1"></i>导出PDF
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 关键指标卡片 -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="stats-card">
+                    <div class="stats-icon" style="background: linear-gradient(45deg, #667eea, #764ba2);">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div class="stats-value" id="total-cost">¥0.00</div>
+                    <div class="stats-label">总成本</div>
+                    <div class="trend-indicator trend-up mt-2">
+                        <i class="fas fa-arrow-up me-1"></i>
+                        <span id="total-cost-trend">+5.2%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="stats-card">
+                    <div class="stats-icon" style="background: linear-gradient(45deg, #f093fb, #f5576c);">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <div class="stats-value" id="material-cost">¥0.00</div>
+                    <div class="stats-label">材料成本</div>
+                    <div class="trend-indicator trend-down mt-2">
+                        <i class="fas fa-arrow-down me-1"></i>
+                        <span id="material-cost-trend">-2.1%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="stats-card">
+                    <div class="stats-icon" style="background: linear-gradient(45deg, #4facfe, #00f2fe);">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stats-value" id="labor-cost">¥0.00</div>
+                    <div class="stats-label">人工成本</div>
+                    <div class="trend-indicator trend-up mt-2">
+                        <i class="fas fa-arrow-up me-1"></i>
+                        <span id="labor-cost-trend">+3.8%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="stats-card">
+                    <div class="stats-icon" style="background: linear-gradient(45deg, #43e97b, #38f9d7);">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <div class="stats-value" id="machine-cost">¥0.00</div>
+                    <div class="stats-label">设备成本</div>
+                    <div class="trend-indicator trend-stable mt-2">
+                        <i class="fas fa-minus me-1"></i>
+                        <span id="machine-cost-trend">0.0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 成本对比分析 -->
+        <div class="cost-comparison">
+            <div class="comparison-card">
+                <div class="comparison-header">
+                    <span class="comparison-title">材料成本占比</span>
+                    <span class="comparison-change trend-down">-2.3%</span>
+                </div>
+                <div class="progress-bar-custom">
+                    <div class="progress-fill" style="width: 45%; background: linear-gradient(90deg, #667eea, #764ba2);"></div>
+                </div>
+                <div class="mt-2 small text-muted">45% of total cost</div>
+            </div>
+            <div class="comparison-card">
+                <div class="comparison-header">
+                    <span class="comparison-title">人工成本占比</span>
+                    <span class="comparison-change trend-up">+1.5%</span>
+                </div>
+                <div class="progress-bar-custom">
+                    <div class="progress-fill" style="width: 30%; background: linear-gradient(90deg, #f093fb, #f5576c);"></div>
+                </div>
+                <div class="mt-2 small text-muted">30% of total cost</div>
+            </div>
+            <div class="comparison-card">
+                <div class="comparison-header">
+                    <span class="comparison-title">设备成本占比</span>
+                    <span class="comparison-change trend-stable">0.0%</span>
+                </div>
+                <div class="progress-bar-custom">
+                    <div class="progress-fill" style="width: 25%; background: linear-gradient(90deg, #4facfe, #00f2fe);"></div>
+                </div>
+                <div class="mt-2 small text-muted">25% of total cost</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- 成本趋势图 -->
+            <div class="col-lg-8 mb-4">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h5 class="chart-title">成本趋势分析</h5>
+                        <div class="filter-group">
+                            <select class="filter-select" id="trend-period" onchange="updateTrendChart()">
+                                <option value="7">最近7天</option>
+                                <option value="30" selected>最近30天</option>
+                                <option value="90">最近90天</option>
+                            </select>
+                            <select class="filter-select" id="trend-product" onchange="updateTrendChart()">
+                                <option value="">所有产品</option>
+                                <option value="HSR170">HSR170系列</option>
+                                <option value="HSR180">HSR180系列</option>
+                            </select>
+                        </div>
+                    </div>
+                    <canvas id="trendChart" height="100"></canvas>
+                </div>
+            </div>
+
+            <!-- 成本结构饼图 -->
+            <div class="col-lg-4 mb-4">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h5 class="chart-title">成本结构分布</h5>
+                    </div>
+                    <canvas id="pieChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- 工艺节点成本对比 -->
+            <div class="col-lg-6 mb-4">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h5 class="chart-title">工艺节点成本对比</h5>
+                        <div class="filter-group">
+                            <select class="filter-select" id="process-workflow" onchange="updateProcessChart()">
+                                <option value="">选择工艺流程</option>
+                                <option value="1">标准衣柜加工流程</option>
+                                <option value="2">定制书柜加工流程</option>
+                            </select>
+                        </div>
+                    </div>
+                    <canvas id="processChart" height="150"></canvas>
+                </div>
+            </div>
+
+            <!-- 材料成本排行 -->
+            <div class="col-lg-6 mb-4">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h5 class="chart-title">材料成本排行</h5>
+                    </div>
+                    <canvas id="materialChart" height="150"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 详细数据表 -->
+        <div class="data-table">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>计算日期</th>
+                            <th>产品SKU</th>
+                            <th>工艺流程</th>
+                            <th>数量</th>
+                            <th>成本构成</th>
+                            <th>总成本</th>
+                            <th>单位成本</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cost-table-body">
+                        <!-- 数据将通过JavaScript动态加载 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 加载指示器 -->
+        <div class="loading-spinner" id="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">加载中...</span>
+            </div>
+            <p class="mt-2 text-muted">正在加载数据...</p>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let trendChart, pieChart, processChart, materialChart;
+        let costData = [];
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            loadCostData();
+        });
+
+        // 初始化图表
+        function initializeCharts() {
+            // 成本趋势图
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
+            trendChart = new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: '总成本',
+                            data: [],
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: '材料成本',
+                            data: [],
+                            borderColor: '#f093fb',
+                            backgroundColor: 'rgba(240, 147, 251, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: '人工成本',
+                            data: [],
+                            borderColor: '#4facfe',
+                            backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: '设备成本',
+                            data: [],
+                            borderColor: '#43e97b',
+                            backgroundColor: 'rgba(67, 233, 123, 0.1)',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '¥' + value.toFixed(0);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 成本结构饼图
+            const pieCtx = document.getElementById('pieChart').getContext('2d');
+            pieChart = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['材料成本', '人工成本', '设备成本', '间接成本'],
+                    datasets: [{
+                        data: [45, 30, 15, 10],
+                        backgroundColor: [
+                            '#667eea',
+                            '#f093fb',
+                            '#4facfe',
+                            '#43e97b'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 工艺节点成本对比图
+            const processCtx = document.getElementById('processChart').getContext('2d');
+            processChart = new Chart(processCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['切割', '封边', '打孔', '组装', '质检', '包装'],
+                    datasets: [{
+                        label: '节点成本',
+                        data: [120, 80, 60, 200, 40, 30],
+                        backgroundColor: [
+                            '#667eea',
+                            '#f093fb',
+                            '#4facfe',
+                            '#43e97b',
+                            '#fa7d75',
+                            '#ffc658'
+                        ],
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '¥' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 材料成本排行图
+            const materialCtx = document.getElementById('materialChart').getContext('2d');
+            materialChart = new Chart(materialCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['E0级板材', '五金配件', '封边条', '胶水', '包装材料'],
+                    datasets: [{
+                        label: '材料成本',
+                        data: [300, 150, 80, 40, 25],
+                        backgroundColor: '#667eea',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '¥' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 加载成本数据
+        async function loadCostData() {
+            showLoading();
+            
+            try {
+                // 模拟API调用
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // 模拟数据
+                const mockData = generateMockData();
+                costData = mockData.calculations;
+                
+                // 更新统计卡片
+                updateStatsCards(mockData.summary);
+                
+                // 更新图表
+                updateTrendChart();
+                updateCostTable();
+                
+            } catch (error) {
+                console.error('加载数据失败:', error);
+                alert('加载数据失败，请重试');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 生成模拟数据
+        function generateMockData() {
+            const calculations = [];
+            const summary = {
+                total_cost: 0,
+                material_cost: 0,
+                labor_cost: 0,
+                machine_cost: 0,
+                overhead_cost: 0
+            };
+
+            // 生成30天的模拟数据
+            for (let i = 0; i < 30; i++) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                
+                const calc = {
+                    id: i + 1,
+                    calculation_date: date.toISOString(),
+                    product_sku: ['HSR170W01', 'HSR170B01', 'HSR180W01'][i % 3],
+                    workflow_name: ['标准衣柜加工', '定制书柜加工'][i % 2],
+                    quantity: Math.floor(Math.random() * 50) + 10,
+                    material_cost: Math.random() * 300 + 200,
+                    labor_cost: Math.random() * 150 + 100,
+                    machine_cost: Math.random() * 100 + 50,
+                    overhead_cost: 0
+                };
+                
+                calc.overhead_cost = (calc.material_cost + calc.labor_cost + calc.machine_cost) * 0.15;
+                calc.total_cost = calc.material_cost + calc.labor_cost + calc.machine_cost + calc.overhead_cost;
+                calc.unit_cost = calc.total_cost / calc.quantity;
+                
+                calculations.push(calc);
+                
+                // 累计到总计
+                summary.total_cost += calc.total_cost;
+                summary.material_cost += calc.material_cost;
+                summary.labor_cost += calc.labor_cost;
+                summary.machine_cost += calc.machine_cost;
+                summary.overhead_cost += calc.overhead_cost;
+            }
+
+            return { calculations, summary };
+        }
+
+        // 更新统计卡片
+        function updateStatsCards(summary) {
+            document.getElementById('total-cost').textContent = '¥' + summary.total_cost.toFixed(2);
+            document.getElementById('material-cost').textContent = '¥' + summary.material_cost.toFixed(2);
+            document.getElementById('labor-cost').textContent = '¥' + summary.labor_cost.toFixed(2);
+            document.getElementById('machine-cost').textContent = '¥' + summary.machine_cost.toFixed(2);
+        }
+
+        // 更新趋势图表
+        function updateTrendChart() {
+            const period = parseInt(document.getElementById('trend-period').value);
+            const filteredData = costData.slice(0, period).reverse();
+            
+            const labels = filteredData.map(item => {
+                const date = new Date(item.calculation_date);
+                return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+            });
+            
+            trendChart.data.labels = labels;
+            trendChart.data.datasets[0].data = filteredData.map(item => item.total_cost);
+            trendChart.data.datasets[1].data = filteredData.map(item => item.material_cost);
+            trendChart.data.datasets[2].data = filteredData.map(item => item.labor_cost);
+            trendChart.data.datasets[3].data = filteredData.map(item => item.machine_cost);
+            
+            trendChart.update();
+        }
+
+        // 更新成本表格
+        function updateCostTable() {
+            const tbody = document.getElementById('cost-table-body');
+            tbody.innerHTML = '';
+            
+            costData.slice(0, 10).forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${new Date(item.calculation_date).toLocaleDateString('zh-CN')}</td>
+                    <td>${item.product_sku}</td>
+                    <td>${item.workflow_name}</td>
+                    <td>${item.quantity}</td>
+                    <td>
+                        <div class="cost-breakdown">
+                            <span class="cost-tag material">材料: ¥${item.material_cost.toFixed(0)}</span>
+                            <span class="cost-tag labor">人工: ¥${item.labor_cost.toFixed(0)}</span>
+                            <span class="cost-tag machine">设备: ¥${item.machine_cost.toFixed(0)}</span>
+                            <span class="cost-tag overhead">间接: ¥${item.overhead_cost.toFixed(0)}</span>
+                        </div>
+                    </td>
+                    <td><strong>¥${item.total_cost.toFixed(2)}</strong></td>
+                    <td>¥${item.unit_cost.toFixed(2)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewDetail(${item.id})">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 更新工艺流程图表
+        function updateProcessChart() {
+            // 这里可以根据选择的工艺流程更新数据
+            processChart.update();
+        }
+
+        // 显示加载状态
+        function showLoading() {
+            document.getElementById('loading-spinner').style.display = 'block';
+        }
+
+        // 隐藏加载状态
+        function hideLoading() {
+            document.getElementById('loading-spinner').style.display = 'none';
+        }
+
+        // 查看详情
+        function viewDetail(id) {
+            const item = costData.find(c => c.id === id);
+            if (item) {
+                alert(`成本计算详情:\n产品: ${item.product_sku}\n总成本: ¥${item.total_cost.toFixed(2)}\n单位成本: ¥${item.unit_cost.toFixed(2)}`);
+            }
+        }
+
+        // 导出Excel
+        function exportToExcel() {
+            alert('导出Excel功能开发中...');
+        }
+
+        // 导出PDF
+        function exportToPDF() {
+            alert('导出PDF功能开发中...');
+        }
+    </script>
+</body>
+</html>
