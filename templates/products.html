@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}产品管理 - 板式家具工艺流程管理系统{% endblock %}
+
+{% block page_title %}产品管理{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{{ url_for('add_product') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> 添加产品
+    </a>
+    <a href="{{ url_for('export_products') }}" class="btn btn-success">
+        <i class="fas fa-download"></i> 导出数据
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow">
+    <div class="card-header">
+        <h6 class="m-0 font-weight-bold text-primary">产品列表</h6>
+    </div>
+    <div class="card-body">
+        {% if products %}
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="productsTable">
+                <thead class="thead-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>系列</th>
+                        <th>SPU</th>
+                        <th>SKU</th>
+                        <th>文件受控状态</th>
+                        <th>标准化落地状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td>{{ product.id }}</td>
+                        <td>{{ product.series }}</td>
+                        <td>{{ product.spu }}</td>
+                        <td>{{ product.sku }}</td>
+                        <td>
+                            <span class="badge {% if product.file_control == '已受控' %}bg-success{% else %}bg-warning{% endif %}">
+                                {{ product.file_control }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge {% if product.standardization == '已落地' %}bg-success{% else %}bg-warning{% endif %}">
+                                {{ product.standardization }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{{ url_for('edit_product', id=product.id) }}" class="btn btn-outline-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{{ url_for('delete_product', id=product.id) }}" 
+                                   class="btn btn-outline-danger"
+                                   onclick="return confirm('确定要删除这个产品吗？')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">暂无产品数据</h5>
+            <p class="text-muted">点击"添加产品"按钮开始添加您的第一个产品</p>
+            <a href="{{ url_for('add_product') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> 添加产品
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 初始化DataTable
+    if ($('#productsTable').length) {
+        $('#productsTable').DataTable({
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Chinese.json"
+            },
+            "pageLength": 25,
+            "order": [[0, "desc"]]
+        });
+    }
+});
+</script>
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.24/css/dataTables.bootstrap5.min.css">
+<!-- DataTables JS -->
+<script type="text/javascript" src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap5.min.js"></script>
+{% endblock %}

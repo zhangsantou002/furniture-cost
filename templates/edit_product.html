@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}编辑产品 - 板式家具工艺流程管理系统{% endblock %}
+
+{% block page_title %}编辑产品{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('products') }}" class="btn btn-secondary">
+    <i class="fas fa-arrow-left"></i> 返回列表
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">编辑产品</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="series" class="form-label">产品系列 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="series" name="series" value="{{ product.series }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="spu" class="form-label">SPU <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="spu" name="spu" value="{{ product.spu }}" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="sku" class="form-label">SKU <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="sku" name="sku" value="{{ product.sku }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="file_control" class="form-label">文件受控状态 <span class="text-danger">*</span></label>
+                                <select class="form-select" id="file_control" name="file_control" required>
+                                    <option value="">请选择状态</option>
+                                    <option value="已受控" {% if product.file_control == '已受控' %}selected{% endif %}>已受控</option>
+                                    <option value="未受控" {% if product.file_control == '未受控' %}selected{% endif %}>未受控</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="standardization" class="form-label">标准化落地状态 <span class="text-danger">*</span></label>
+                                <select class="form-select" id="standardization" name="standardization" required>
+                                    <option value="">请选择状态</option>
+                                    <option value="已落地" {% if product.standardization == '已落地' %}selected{% endif %}>已落地</option>
+                                    <option value="未落地" {% if product.standardization == '未落地' %}selected{% endif %}>未落地</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('products') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> 取消
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> 保存修改
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 表单验证
+    $('form').on('submit', function(e) {
+        let isValid = true;
+        
+        // 检查必填字段
+        $('input[required], select[required]').each(function() {
+            if (!$(this).val()) {
+                $(this).addClass('is-invalid');
+                isValid = false;
+            } else {
+                $(this).removeClass('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('请填写所有必填字段');
+        }
+    });
+    
+    // 实时验证
+    $('input[required], select[required]').on('blur', function() {
+        if (!$(this).val()) {
+            $(this).addClass('is-invalid');
+        } else {
+            $(this).removeClass('is-invalid');
+        }
+    });
+});
+</script>
+{% endblock %}

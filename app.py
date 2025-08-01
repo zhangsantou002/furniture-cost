@@ -4,7 +4,7 @@ from models import db as workflow_db, Product
 import plotly.graph_objs as go
 import plotly.utils
 import json
-import pandas as pd
+from collections import Counter
 
 # 导入工艺流程相关模块
 try:
@@ -52,16 +52,16 @@ with app.app_context():
 def generate_charts():
     """生成多维度图表"""
     products = Product.query.all()
-    df = pd.DataFrame([p.to_dict() for p in products])
+    product_data = [p.to_dict() for p in products]
 
     charts = {}
 
     # 1. 系列分布饼图
-    series_counts = df['series'].value_counts()
+    series_counts = Counter(p['series'] for p in product_data)
     charts['series_pie'] = json.dumps({
         'data': [{
-            'values': series_counts.values.tolist(),
-            'labels': series_counts.index.tolist(),
+            'values': list(series_counts.values()),
+            'labels': list(series_counts.keys()),
             'type': 'pie',
             'name': '系列分布'
         }],
@@ -72,11 +72,11 @@ def generate_charts():
     }, cls=plotly.utils.PlotlyJSONEncoder)
 
     # 2. 文件受控状态柱状图
-    file_control_counts = df['file_control'].value_counts()
+    file_control_counts = Counter(p['file_control'] for p in product_data)
     charts['file_control_bar'] = json.dumps({
         'data': [{
-            'x': file_control_counts.index.tolist(),
-            'y': file_control_counts.values.tolist(),
+            'x': list(file_control_counts.keys()),
+            'y': list(file_control_counts.values()),
             'type': 'bar',
             'marker': {'color': ['#ff6b6b', '#4ecdc4']}
         }],
@@ -89,11 +89,11 @@ def generate_charts():
     }, cls=plotly.utils.PlotlyJSONEncoder)
 
     # 3. 标准化落地状态柱状图
-    std_counts = df['standardization'].value_counts()
+    std_counts = Counter(p['standardization'] for p in product_data)
     charts['standardization_bar'] = json.dumps({
         'data': [{
-            'x': std_counts.index.tolist(),
-            'y': std_counts.values.tolist(),
+            'x': list(std_counts.keys()),
+            'y': list(std_counts.values()),
             'type': 'bar',
             'marker': {'color': ['#45b7d1', '#f9ca24']}
         }],
@@ -102,58 +102,6 @@ def generate_charts():
             'xaxis': {'title': '落地状态'},
             'yaxis': {'title': '产品数量'},
             'height': 400
-        }
-    }, cls=plotly.utils.PlotlyJSONEncoder)
-
-    # 4. 系列vs状态热力图
-    pivot_table = df.groupby(['series', 'file_control']).size().unstack(fill_value=0)
-    charts['heatmap'] = json.dumps({
-        'data': [{
-            'z': pivot_table.values.tolist(),
-            'x': pivot_table.columns.tolist(),
-            'y': pivot_table.index.tolist(),
-            'type': 'heatmap',
-            'colorscale': 'Viridis'
-        }],
-        'layout': {
-            'title': '系列 vs 文件受控状态热力图',
-            'xaxis': {'title': '文件受控状态'},
-            'yaxis': {'title': '产品系列'},
-            'height': 400
-        }
-    }, cls=plotly.utils.PlotlyJSONEncoder)
-
-    # 5. 四象限分析
-    df['file_control_num'] = df['file_control'].map({'已受控': 1, '未受控': 0})
-    df['standardization_num'] = df['standardization'].map({'已落地': 1, '未落地': 0})
-
-    charts['scatter'] = json.dumps({
-        'data': [{
-            'x': df['file_control_num'].tolist(),
-            'y': df['standardization_num'].tolist(),
-            'mode': 'markers',
-            'type': 'scatter',
-            'text': df['sku'].tolist(),
-            'marker': {
-                'size': 10,
-                'color': df['series'].map({'Zina': 0, 'Wivor': 1}).tolist(),
-                'colorscale': 'Viridis',
-                'showscale': True
-            }
-        }],
-        'layout': {
-            'title': '文件受控 vs 标准化落地四象限分析',
-            'xaxis': {
-                'title': '文件受控状态',
-                'tickvals': [0, 1],
-                'ticktext': ['未受控', '已受控']
-            },
-            'yaxis': {
-                'title': '标准化落地状态',
-                'tickvals': [0, 1],
-                'ticktext': ['未落地', '已落地']
-            },
-            'height': 500
         }
     }, cls=plotly.utils.PlotlyJSONEncoder)
 
@@ -168,14 +116,23 @@ def dashboard():
     products = Product.query.all()
 
     # 统计数据
-    stats = {
-        'total_products': len(products),
-        'controlled_files': len([p for p in products if p.file_control == '已受控']),
-        'standardized': len([p for p in products if p.standardization == '已落地']),
-        'series_count': len(set(p.series for p in products))
-    }
+    total_products = len(products)
+    controlled_products = len([p for p in products if p.file_control == '已受控'])
+    standardized_products = len([p for p in products if p.standardization == '已落地'])
+    
+    # 获取工艺流程模板数量
+    try:
+        from models import WorkflowTemplate
+        workflow_templates = WorkflowTemplate.query.count()
+    except:
+        workflow_templates = 0
 
-    return render_template('dashboard.html', charts=charts, stats=stats)
+    return render_template('dashboard.html', 
+                         charts=charts, 
+                         total_products=total_products,
+                         controlled_products=controlled_products,
+                         standardized_products=standardized_products,
+                         workflow_templates=workflow_templates)
 
 
 @app.route('/products')
